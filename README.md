@@ -35,11 +35,12 @@ dfx start --clean --background
 //Set identity if you need to
 dfx identity new me && dfx identity use me
 
-//Create/build/install i.e. deploy...
-dfx canister create wrapped_cycles && dfx build wrapped_cycles && dfx canister install wrapped_cycles
+//Deploy all
+dfx deploy --all
 
-//Set WIC Canister ID
+//Set WIC Canister ID and test canister
 WICCAN=$(dfx canister id wrapped_cycles)
+TESTCAN=$(dfx canister id test)
 
 //Check available cycles in canister, whoami and current balance
 dfx canister call $WICCAN whoami
@@ -53,10 +54,12 @@ dfx canister --no-wallet call $(dfx identity get-wallet) wallet_call "(record { 
 dfx canister call $WICCAN myBalance
 dfx canister call $WICCAN availableCycles
 
-//Burn cycles by converting tokens back to cycles which can be sent to a user specified canister
-//For the purposes of testing, we are just sending the cycles back to the WIC canister
-//We should see our balance decrease but available cycles whould remain the same:
-dfx canister call $WICCAN burn "(500_000_000_000:nat, (func \"$WICCAN\".accept))"
+//Burn WIC and send to TEST canister. 
+dfx canister call $TESTCAN availableCycles
+dfx canister call $WICCAN burn "(500_000_000_000:nat, (func \"$TESTCAN\".accept))"
+
+//Check balances again
 dfx canister call $WICCAN myBalance
+dfx canister call $TESTCAN availableCycles
 dfx canister call $WICCAN availableCycles
 ```

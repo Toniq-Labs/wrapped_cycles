@@ -194,7 +194,7 @@ actor WrappedCycles{
     return symbol_;
   };
   
-  //Helpers for testing - removing in final
+  //Helpers for testing - remove in final
   public shared(msg) func myBalance() : async Nat {
     switch (balances.get(msg.caller)) {
       case (?balance) {
@@ -205,18 +205,7 @@ actor WrappedCycles{
       };
     }
   };
-  public shared(msg) func whoami() : async Principal {
-    return msg.caller;
-  };
   public query func availableCycles() : async Nat {
     return Cycles.balance()
-  };
-  //This is to test burning without deploying a second canister. 
-  //The user balance and total supply should decrease
-  //but the available cycles will remain the same
-  public func accept() : async () {
-    let available = Cycles.available();
-    let accepted = Cycles.accept(available);
-    assert (accepted == available);
   };
 }
