@@ -7,7 +7,7 @@ actor WrappedCycles{
   type Callback = shared () -> async ();
   
   private stable let name_ : Text = "Wrapped ICP Cycles";
-  private stable let decimals_ : Nat = 9;
+  private stable let decimals_ : Nat = 12;
   private stable let symbol_ : Text = "WIC";
   private stable var totalSupply_ : Nat  = 0;
   private var balances =  HashMap.HashMap<Principal, Nat>(1, Principal.equal, Principal.hash);
