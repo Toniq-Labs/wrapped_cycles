@@ -28,6 +28,8 @@ This can be submitted to the burn function in the following form:
 ```
 
 ## Testing
+We create two canisters, our WIC canister which handles the burning/minting/token logic and a test canister which can receive returned cycles (via burning).
+
 ```bash
 //Clean start (if you want)
 dfx start --clean --background
@@ -42,8 +44,7 @@ dfx deploy --all
 WICCAN=$(dfx canister id wrapped_cycles)
 TESTCAN=$(dfx canister id test)
 
-//Check available cycles in canister, whoami and current balance
-dfx canister call $WICCAN whoami
+//Check available cycles in canister and current balance
 dfx canister call $WICCAN availableCycles
 dfx canister call $WICCAN myBalance
 
