@@ -1,20 +1,62 @@
-# wrapped_cycles
+# Wrapped ICP Cycles (WIC)
 
-Welcome to your new wrapped_cycles project and to the internet computer development community. By default, creating a new project adds this README and some template files to your project directory. You can edit these template files to customize your project and to include your own code to speed up the development cycle.
+Motoko canister code for wrapped ICP cycles as erc20 style tokens. This canister utilizes a standard ERC20 style token with additional "burn" and "mint" functions. We hope to deploy a version of this canister to the ICP as soon as we can.
 
-To get started, you might want to explore the project directory structure and the default configuration file. Working with this project in your development environment will not affect any production deployment or identity tokens.
+## Minting
+Tokens are minted by using the cycles wallet `wallet_call` feature which allows us to forward cycles to the WIC canister which is converted to WIC (1T cycles = 1WIC). We can then continue to trade these tokens like any other token on exchanges.
 
-To learn more before you start working with wrapped_cycles, see the following documentation available online:
+## Burning
+Tokens can be returned to the WIC canister via a burn mechanism, which then returns an equal amount of cycles to a user defined canister (1WIC = 1T cycles). This allows developers to easily purchase WIC from secondary markets and have it easily send to their canisters. To burn tokens, the user must provide a canister ID and method (the **callback** function) which can accept the returned cycles.
 
-- [Quick Start](https://sdk.dfinity.org/docs/quickstart/quickstart-intro.html)
-- [SDK Developer Tools](https://sdk.dfinity.org/docs/developers-guide/sdk-guide.html)
-- [Motoko Programming Language Guide](https://sdk.dfinity.org/docs/language-guide/motoko.html)
-- [Motoko Language Quick Reference](https://sdk.dfinity.org/docs/language-guide/language-manual.html)
+The callback must be of the following type:
+```
+type Callback = shared () -> async ();
+```
 
-If you want to start working on your project right away, you might want to try the following commands:
+An example function that can be included in your canister is as follows:
+```
+public func accept() : async () {
+    let available = Cycles.available();
+    let accepted = Cycles.accept(available);
+    assert (accepted == available);
+};
+```
+This can be submitted to the burn function in the following form:
+```
+//Where ryjl3-tyaaa-aaaaa-aaaba-cai is the principal/canister id of your canister
+(func ryjl3-tyaaa-aaaaa-aaaba-cai.accept)
+```
 
+## Testing
 ```bash
-cd wrapped_cycles/
-dfx help
-dfx config --help
+//Clean start (if you want)
+dfx start --clean --background
+
+//Set identity if you need to
+dfx identity new me && dfx identity use me
+
+//Create/build/install i.e. deploy...
+dfx canister create wrapped_cycles && dfx build wrapped_cycles && dfx canister install wrapped_cycles
+
+//Set WIC Canister ID
+WICCAN=$(dfx canister id wrapped_cycles)
+
+//Check available cycles in canister, whoami and current balance
+dfx canister call $WICCAN whoami
+dfx canister call $WICCAN availableCycles
+dfx canister call $WICCAN myBalance
+
+//Mint some WIC from cycles wallet (1T cycles == 1WIC)
+dfx canister --no-wallet call $(dfx identity get-wallet) wallet_call "(record { canister = principal \"$WICCAN\"; method_name = \"mint\"; args = blob \"DIDL\00\00\"; cycles = (1_000_000_000_000:nat64); } )"
+
+//Check new balance and available cycles (both should have increased by 1T)
+dfx canister call $WICCAN myBalance
+dfx canister call $WICCAN availableCycles
+
+//Burn cycles by converting tokens back to cycles which can be sent to a user specified canister
+//For the purposes of testing, we are just sending the cycles back to the WIC canister
+//We should see our balance decrease but available cycles whould remain the same:
+dfx canister call $WICCAN burn "(500_000_000_000:nat, (func \"$WICCAN\".accept))"
+dfx canister call $WICCAN myBalance
+dfx canister call $WICCAN availableCycles
 ```
