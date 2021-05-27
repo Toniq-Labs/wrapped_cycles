@@ -2,6 +2,8 @@
 
 Motoko canister code for wrapped ICP cycles as erc20 style tokens. This canister utilizes a standard ERC20 style token with additional "burn" and "mint" functions. We hope to deploy a version of this canister to the ICP as soon as we can.
 
+In theory, WIC should essentially be a stablecoin (1WIC = 1XDR).
+
 ## Minting
 Tokens are minted by using the cycles wallet `wallet_call` feature which allows us to forward cycles to the WIC canister which is converted to WIC (1T cycles = 1WIC). We can then continue to trade these tokens like any other token on exchanges.
 
