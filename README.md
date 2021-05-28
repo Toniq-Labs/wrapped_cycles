@@ -17,10 +17,9 @@ type Callback = shared () -> async ();
 
 An example function that can be included in your canister is as follows:
 ```
-public func accept() : async () {
-    let available = Cycles.available();
-    let accepted = Cycles.accept(available);
-    assert (accepted == available);
+//Proposed standard to topup canisters
+public func accept_cycles() : async () {
+    Cycles.accept(Cycles.available());
 };
 ```
 This can be submitted to the burn function in the following form:
@@ -59,7 +58,7 @@ dfx canister call $WICCAN availableCycles
 
 //Burn WIC and send to TEST canister. 
 dfx canister call $TESTCAN availableCycles
-dfx canister call $WICCAN burn "(500_000_000_000:nat, (func \"$TESTCAN\".accept))"
+dfx canister call $WICCAN burn "(500_000_000_000:nat, (func \"$TESTCAN\".accept_cycles))"
 
 //Check balances again
 dfx canister call $WICCAN myBalance

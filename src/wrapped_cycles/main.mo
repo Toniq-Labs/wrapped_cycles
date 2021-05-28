@@ -36,11 +36,9 @@ actor WrappedCycles{
     Caller should submit a function to accept the cycles, e.g.:
     Callback function should be of type callback shared() -> async ()
     e.g. below:
-    public func accept() : async () {
-      let available = Cycles.available();
-      let accepted = Cycles.accept(available);
-      assert (accepted == available);
-    }
+    public func accept_cycles() : async () {
+      Cycles.accept(Cycles.available());
+    };
   */
   public shared(msg) func burn(amount : Nat, callback : Callback) : async Bool {
     switch (balances.get(msg.caller)) {
@@ -193,7 +191,9 @@ actor WrappedCycles{
   public query func symbol() : async Text {
     return symbol_;
   };
-  
+  public func accept_cycles() : async () {
+    Cycles.accept(Cycles.available());
+  };
   //Helpers for testing - remove in final
   public shared(msg) func myBalance() : async Nat {
     switch (balances.get(msg.caller)) {
