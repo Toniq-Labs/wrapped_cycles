@@ -27,7 +27,7 @@ public func accept_cycles() : async () {
 This can be submitted to the burn function in the following form:
 ```
 //Where ryjl3-tyaaa-aaaaa-aaaba-cai is the principal/canister id of your canister
-(func ryjl3-tyaaa-aaaaa-aaaba-cai.accept)
+(func ryjl3-tyaaa-aaaaa-aaaba-cai.accept_cycles)
 ```
 
 ## Testing
