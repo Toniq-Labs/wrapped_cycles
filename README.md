@@ -67,3 +67,7 @@ dfx canister call $WICCAN myBalance
 dfx canister call $TESTCAN availableCycles
 dfx canister call $WICCAN availableCycles
 ```
+## TODO
+- Better protection for callbacks not accepting all cycles (e.g. check refunded amount)
+- Look into min threshold
+- Move cycles to storage canisters for better control
