@@ -1,4 +1,4 @@
-# Wrapped ICP Cycles (WIC)
+# Wrapped ICP Cycles (WIC) Proposal
 
 Motoko canister code for wrapped ICP cycles as erc20 style tokens. This canister utilizes a standard ERC20 style token with additional "burn" and "mint" functions. We hope to deploy a version of this canister to the ICP as soon as we can.
 
