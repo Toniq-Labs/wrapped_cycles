@@ -19,7 +19,9 @@ An example function that can be included in your canister is as follows:
 ```
 //Proposed standard to topup canisters
 public func accept_cycles() : async () {
-    Cycles.accept(Cycles.available());
+  let available = Cycles.available();
+  let accepted = Cycles.accept(available);
+  assert (accepted == available);
 };
 ```
 This can be submitted to the burn function in the following form:

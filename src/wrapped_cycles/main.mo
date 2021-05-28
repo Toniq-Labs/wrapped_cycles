@@ -9,6 +9,8 @@ actor WrappedCycles{
   private stable let name_ : Text = "Wrapped ICP Cycles";
   private stable let decimals_ : Nat = 12;
   private stable let symbol_ : Text = "WIC";
+  //Threshold for min cycles required for computation
+  private stable let minCyclesThreshold_ : Nat = 2_000_000_000_000;
   private stable var totalSupply_ : Nat  = 0;
   private var balances =  HashMap.HashMap<Principal, Nat>(1, Principal.equal, Principal.hash);
   private var allowances = HashMap.HashMap<Principal, HashMap.HashMap<Principal, Nat>>(1, Principal.equal, Principal.hash);
@@ -16,6 +18,7 @@ actor WrappedCycles{
   //To convert Cycles into WIC
   //You can use the cycle wallets `wallet_call` method
   public shared(msg) func mint() : async () {
+    assert_cycles();
     let amount = Cycles.available();
     assert(amount > 0);
     let accepted = Cycles.accept(amount);
@@ -37,10 +40,13 @@ actor WrappedCycles{
     Callback function should be of type callback shared() -> async ()
     e.g. below:
     public func accept_cycles() : async () {
-      Cycles.accept(Cycles.available());
+      let available = Cycles.available();
+      let accepted = Cycles.accept(available);
+      assert (accepted == available);
     };
   */
   public shared(msg) func burn(amount : Nat, callback : Callback) : async Bool {
+    assert_cycles();
     switch (balances.get(msg.caller)) {
       case (?balance) {
         assert (amount <= balance);
@@ -63,6 +69,7 @@ actor WrappedCycles{
   
   //ERC20 TODO: Change based on standard approved by community
   public shared(msg) func transfer(to: Principal, value: Nat) : async Bool {
+    assert_cycles();
     switch (balances.get(msg.caller)) {
       case (?from_balance) {
         if (from_balance >= value) {
@@ -91,6 +98,7 @@ actor WrappedCycles{
   };
 
   public shared(msg) func transferFrom(from: Principal, to: Principal, value: Nat) : async Bool {
+    assert_cycles();
     switch (balances.get(from), allowances.get(from)) {
       case (?from_balance, ?allowance_from) {
         switch (allowance_from.get(msg.caller)) {
@@ -132,6 +140,7 @@ actor WrappedCycles{
   };
 
   public shared(msg) func approve(spender: Principal, value: Nat) : async Bool {
+    assert_cycles();
     switch(allowances.get(msg.caller)) {
       case (?allowances_caller) {
         allowances_caller.put(spender, value);
@@ -191,9 +200,23 @@ actor WrappedCycles{
   public query func symbol() : async Text {
     return symbol_;
   };
-  public func accept_cycles() : async () {
-    Cycles.accept(Cycles.available());
+  
+  public query func minCyclesThreshold() : async Nat {
+    return minCyclesThreshold_;
   };
+  
+  public func accept_cycles() : async () {
+    let available = Cycles.available();
+    let accepted = Cycles.accept(available);
+    assert (accepted == available);
+  };
+  
+  //Private
+  //Ensure there are tokens available for computation
+  private func assert_cycles() : () {
+    assert( Cycles.balance() > (totalSupply_ + minCyclesThreshold_) );
+  };
+  
   //Helpers for testing - remove in final
   public shared(msg) func myBalance() : async Nat {
     switch (balances.get(msg.caller)) {
@@ -204,6 +227,9 @@ actor WrappedCycles{
         return 0;
       };
     }
+  };
+  public shared(msg) func whoami() : async Principal {
+    return msg.caller;
   };
   public query func availableCycles() : async Nat {
     return Cycles.balance()
