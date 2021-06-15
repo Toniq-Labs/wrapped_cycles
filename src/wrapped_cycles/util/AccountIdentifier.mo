@@ -42,10 +42,6 @@ module {
     return Hex.encode(Array.append(crc, hash));
   };
   
-  public func hash(x : AccountIdentifier) : Hash.Hash {
-    return Hash.hash(x);
-  }
-  public func equal(x : AccountIdentifier, y : AccountIdentifier) : Bool {
-    return Text.Equal(x, y);
-  }
+  public let equal = Text.equal;
+  public let hash = Text.hash;
 };

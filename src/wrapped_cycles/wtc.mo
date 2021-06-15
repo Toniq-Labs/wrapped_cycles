@@ -40,8 +40,17 @@ actor WTC_Token {
   private let MINTING_FEE : Balance = 5_000_000;
   private let MIN_CYCLE_THRESHOLD : Balance = 2_000_000_000_000;
 
+  //stable state
   private stable var _supply : Balance  = 0;
-  private var _balances =  HashMap.HashMap<AccountIdentifier, Balance>(1, AID.equal, AID.hash);
+  private stable var _balanceState : [(AccountIdentifier, Balance)] = [];
+  private var _balances =  HashMap.HashMap<AccountIdentifier, Balance> = HashMap.fromIter(_balanceState.vals(), 0, AID.equal, AID.hash);
+  system func preupgrade() {
+      _balanceState := Iter.toArray(balances.entries());
+  };
+
+  system func postupgrade() {
+      _balanceState := [];
+  };
   
   // WTC specific calls
   //To convert Cycles into WTC
