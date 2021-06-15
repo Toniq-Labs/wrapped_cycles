@@ -1,15 +1,11 @@
 {
   "canisters": {
-    "wrapped_cycles": {
-      "main": "src/wrapped_cycles/main.mo",
-      "type": "motoko"
-    },
-    "test": {
-      "main": "src/wrapped_cycles/test.mo",
+    "wtc": {
+      "main": "src/wtc/main.mo",
       "type": "motoko"
     }
   },
-  "dfx": "0.7.0",
+  "dfx": "0.7.1",
   "networks": {
     "local": {
       "bind": "127.0.0.1:8000",

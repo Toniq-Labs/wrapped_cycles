@@ -3,7 +3,7 @@
  */
 
 module ExtCommon = {
-  type Metadata = {
+  public type Metadata = {
     #fungible : {
       name : Text;
       symbol : Text;
