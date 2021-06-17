@@ -1,1 +1,2 @@
-
+# Minting
+Coming soon...
