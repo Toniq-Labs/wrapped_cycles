@@ -1,6 +1,6 @@
 # Wrapped Trillion Cycles (WTC)
 
-WTC is a wrapped form of native ICP cycles, where 1WTC is equal to 1T cycles. This canister utilizes the EXT token standard with additional calls to facilitate the minting and conversion of WTC and cycles. This is current live and can be viewed here: [WTC Token](https://dsneu-dyaaa-aaaad-qagwa-cai.ic.fleek.co/)
+WTC is a wrapped form of native ICP cycles, where 1WTC is equal to 1T cycles. This canister utilizes the [EXT token standard](https://github.com/Toniq-Labs/extendable-token/blob/main/README.md) with additional calls to facilitate the minting and conversion of WTC and cycles. This is current live and can be viewed here: [WTC Token](https://dsneu-dyaaa-aaaad-qagwa-cai.ic.fleek.co/)
 
 In theory, WTC should maintain a stable value of 1XDR and therefore can be used as a stablecoin
 
