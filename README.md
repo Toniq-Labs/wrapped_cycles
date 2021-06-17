@@ -1,37 +1,17 @@
-# Wrapped ICP Cycles (WIC) Proposal
+# Wrapped Trillion Cycles (WTC)
 
-Motoko canister code for wrapped ICP cycles as erc20 style tokens. This canister utilizes a standard ERC20 style token with additional "burn" and "mint" functions. We hope to deploy a version of this canister to the ICP as soon as we can.
+WTC is a wrapped form of native ICP cycles, where 1WTC is equal to 1T cycles. This canister utilizes the EXT token standard with additional calls to facilitate the minting and conversion of WTC and cycles. This is current live and can be viewed here: [WTC Token](https://dsneu-dyaaa-aaaad-qagwa-cai.ic.fleek.co/)
 
-In theory, WIC should essentially be a stablecoin (1WIC = 1XDR).
+In theory, WTC should maintain a stable value of 1XDR and therefore can be used as a stablecoin
 
 ## Minting
-Tokens are minted by using the cycles wallet `wallet_call` feature which allows us to forward cycles to the WIC canister which is converted to WIC (1T cycles = 1WIC). We can then continue to trade these tokens like any other token on exchanges.
+Tokens can be minted by sending ICP directly to our Minter to be converted to WTC (WIP), or by sending cycles to our token canister. You can read more about it [here](MINTING.md).
 
-## Burning
-Tokens can be returned to the WIC canister via a burn mechanism, which then returns an equal amount of cycles to a user defined canister (1WIC = 1T cycles). This allows developers to easily purchase WIC from secondary markets and have it easily send to their canisters. To burn tokens, the user must provide a canister ID and method (the **callback** function) which can accept the returned cycles.
-
-The callback must be of the following type:
-```
-type Callback = shared () -> async ();
-```
-
-An example function that can be included in your canister is as follows:
-```
-//Proposed standard to topup canisters
-public func accept_cycles() : async () {
-  let available = Cycles.available();
-  let accepted = Cycles.accept(available);
-  assert (accepted == available);
-};
-```
-This can be submitted to the burn function in the following form:
-```
-//Where ryjl3-tyaaa-aaaaa-aaaba-cai is the principal/canister id of your canister
-(func ryjl3-tyaaa-aaaaa-aaaba-cai.accept_cycles)
-```
+## Burning/Claiming/Converting back to cycles
+WTC can be returned and converted back to cycles via a transfer call, or using the more advanced `burn` call. You can read more about it [here](CLAIMING.md).
 
 ## Testing
-We create two canisters, our WIC canister which handles the burning/minting/token logic and a test canister which can receive returned cycles (via burning).
+Following might be out dated, be warned
 
 ```bash
 //Clean start (if you want)
