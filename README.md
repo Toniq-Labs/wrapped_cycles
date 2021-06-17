@@ -11,7 +11,7 @@ Tokens can be minted by sending ICP directly to our Minter to be converted to WT
 WTC can be returned and converted back to cycles via a transfer call, or using the more advanced `burn` call. You can read more about it [here](CLAIMING.md).
 
 ## Testing
-Following might be out dated, be warned
+If you are running this locally
 
 ```bash
 //Clean start (if you want)
@@ -24,30 +24,22 @@ dfx identity new me && dfx identity use me
 dfx deploy --all
 
 //Set WIC Canister ID and test canister
-WICCAN=$(dfx canister id wrapped_cycles)
-TESTCAN=$(dfx canister id test)
+WTCCAN=$(dfx canister id wtc)
 
-//Check available cycles in canister and current balance
-dfx canister call $WICCAN availableCycles
-dfx canister call $WICCAN myBalance
+//Check current balances
+dfx canister call $WTCCAN balances
 
 //Mint some WIC from cycles wallet (1T cycles == 1WIC)
-dfx canister --no-wallet call $(dfx identity get-wallet) wallet_call "(record { canister = principal \"$WICCAN\"; method_name = \"mint\"; args = blob \"DIDL\00\00\"; cycles = (1_000_000_000_000:nat64); } )"
+dfx canister --no-wallet call $(dfx identity get-wallet) wallet_call "(record { canister = principal \"$WTCCAN\"; method_name = \"mint\"; args = blob \"DIDL\00\01\7f\"; cycles = (1_000_000_000_000:nat64); } )"
 
-//Check new balance and available cycles (both should have increased by 1T)
-dfx canister call $WICCAN myBalance
-dfx canister call $WICCAN availableCycles
+//Check new balance
+dfx canister call $WTCCAN balances
 
-//Burn WIC and send to TEST canister. 
-dfx canister call $TESTCAN availableCycles
-dfx canister call $WICCAN burn "(500_000_000_000:nat, (func \"$TESTCAN\".accept_cycles))"
+//Burn WIC and send to WICCAN canister. 
+dfx canister call $WTCCAN burn "(500_000_000_000:nat, (func \"$WTCCAN\".acceptCycles))"
 
 //Check balances again
-dfx canister call $WICCAN myBalance
-dfx canister call $TESTCAN availableCycles
-dfx canister call $WICCAN availableCycles
+dfx canister call $WTCCAN balances
 ```
 ## TODO
-- Better protection for callbacks not accepting all cycles (e.g. check refunded amount)
-- Look into min threshold
-- Move cycles to storage canisters for better control
+- Testing and review
