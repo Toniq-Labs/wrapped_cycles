@@ -20,7 +20,7 @@ module {
   
   
   private let ads : [Nat8] = [10, 97, 99, 99, 111, 117, 110, 116, 45, 105, 100]; //b"\x0Aaccount-id"
-  private let sa_zero : [Nat8] = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+  public let SUBACCOUNT_ZERO : [Nat8] = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 
   //Public functions
   public func fromText(t : Text, sa : ?SubAccount) : AccountIdentifier {
@@ -33,7 +33,7 @@ module {
     return fromBytes(Blob.toArray(b), sa);
   };
   public func fromBytes(data : [Nat8], sa : ?SubAccount) : AccountIdentifier {
-    var _sa : [Nat8] = sa_zero;
+    var _sa : [Nat8] = SUBACCOUNT_ZERO;
     if (Option.isSome(sa)) {
       _sa := Option.unwrap(sa);
     };

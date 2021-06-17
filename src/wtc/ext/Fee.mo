@@ -6,7 +6,8 @@ module ExtFee = {
     token : ExtCore.TokenIdentifier;
     amount : ExtCore.Balance;
     fee : ExtCore.Balance;
-    memo : ?ExtCore.Memo;
+    memo : ExtCore.Memo;
     notify : Bool;
+    subaccount : ?ExtCore.SubAccount;
   };
 };

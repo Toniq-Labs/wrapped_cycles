@@ -3,6 +3,10 @@
     "wtc": {
       "main": "src/wtc/main.mo",
       "type": "motoko"
+    },
+    "minter": {
+      "main": "src/wtc/minter.mo",
+      "type": "motoko"
     }
   },
   "dfx": "0.7.1",

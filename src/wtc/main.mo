@@ -2,6 +2,7 @@ import Cycles "mo:base/ExperimentalCycles";
 import HashMap "mo:base/HashMap";
 import Principal "mo:base/Principal";
 import Result "mo:base/Result";
+import Blob "mo:base/Blob";
 import Iter "mo:base/Iter";
 import AID "./util/AccountIdentifier";
 import ExtCore "./ext/Core";
@@ -32,18 +33,22 @@ actor WTC_Token {
   
   // wtc types
   type Callback = shared () -> async ();
+  type CallbackService = actor{ acceptCycles : Callback };
   
   //Init variables
-  private stable let METADATA : Metadata = #fungible({
-    name = "Wrapped Trillion Cycles";
+  //No real point this being stable when using let? 
+  //maybe better as a stable var
+  private stable let WTCMETADATA : Metadata = #fungible({
+    name = "Wrapped Cycles";
     symbol = "WTC";
     decimals = 12;
     metadata = null;
   }); 
   
   private let EXTENSIONS : [Extension] = ["@ext/common", "@ext/secure", "@ext/fee"];
-  private let MINTING_FEE : Balance = 5_000_000;
-  private let MIN_CYCLE_THRESHOLD : Balance = 2_000_000_000_000;
+  private let MINTING_FEE : Balance = 1_000_000_000;
+  private let MIN_CYCLE_THRESHOLD : Balance = 500_000_000_000;
+  private let BURN_MEMO : Memo = Blob.fromArray([107, 100, 107, 110, 114, 115]); //6b646b6e7273 or 0x6b646b6e7273
 
   //stable state
   private stable var _supply : Balance  = 0;
@@ -61,12 +66,12 @@ actor WTC_Token {
   //To convert Cycles into WTC
   //You can use the cycle wallets `wallet_call` method
   public shared(msg) func mint(user : ?User) : async () {
-    _assertCycles();
     let aid = switch (user) {
       case (?u) {
         _aidFromUser(u);
       };
       case (_) {
+        //Currently defaults to sender, but maybe we return an error here?
         AID.fromPrincipal(msg.caller, null);
       };
     };
@@ -96,28 +101,13 @@ actor WTC_Token {
       assert (accepted == available);
     };
   */
+  //TODO add fee in burn
   public shared(msg) func burn(amount : Balance, callback : Callback) : async Bool {
     _assertCycles();
     let aid = AID.fromPrincipal(msg.caller, null);
-    switch (_balances.get(aid)) {
-      case (?balance) {
-        assert (amount <= balance);
-        Cycles.add(amount);
-        await callback();
-        let refund = Cycles.refunded();
-        let delta : Balance = (amount - refund);
-        assert(delta > 0);
-        let new_balance : Balance = balance - delta;
-        assert(new_balance < balance);
-        _balances.put(aid, new_balance);
-        _supply -= delta;
-        return true;
-      };
-      case (_) {
-        return false;
-      };
-    }
+    await _burnAndSendCycles(aid, amount, callback);
   };
+  
   
   public query func minCyclesThreshold() : async Balance {
     return MIN_CYCLE_THRESHOLD;
@@ -133,74 +123,101 @@ actor WTC_Token {
     assert (accepted == available);
   };
 
-  public query func availableCycles() : async Nat {
+  public query func actualCycles() : async Nat {
     assert(Cycles.balance() > _supply);
     return Cycles.balance() - _supply;
   };
   
+  public query func availableCycles() : async Nat {
+    return Cycles.balance();
+  };
+  
   //ext specific calls
   //Update calls
+  //customized to allow for BURN on the fly (easier for users to send WTC as cycles to a canister
   public shared(msg) func transfer(request: TransferRequest) : async TransferResponse {
     _assertCycles();
-    let from_aid = AID.fromPrincipal(msg.caller, null);
+    let from_aid = AID.fromPrincipal(msg.caller, request.subaccount);
     if (AID.equal(from_aid, _aidFromUser(request.from)) == false) {
-      return #err(#Unauthorized);
+      return #err(#Unauthorized(from_aid));
     };
     let to_aid = _aidFromUser(request.to);
     let amountAndFee : Balance = request.amount + request.fee;
     switch (_balances.get(from_aid)) {
       case (?from_balance) {
         if (from_balance >= amountAndFee) {
-          //Remove funds from sender first
-          let from_balance_new : Balance = from_balance - amountAndFee;
-          assert(from_balance_new <= from_balance);
-          _balances.put(from_aid, from_balance_new);
-          
           //Fee is always consumed
           _supply := _supply - request.fee;
-          var accepted : Balance = request.amount;
+          let from_balance_after_fee : Balance = from_balance - request.fee;
+          _balances.put(from_aid, from_balance_after_fee);
           
-          //Try and notify
-          if (request.notify == true) {
+          if (request.memo == BURN_MEMO) {
+            //Special case for converting WTC to cycles on the fly
+            //We do not notify here
+            //request.to must be a principal
             switch(request.to) {
               case (#address address) {
-                //Refund and exit - can only notify principals
-                _refund(from_aid, request.amount);
-                return #err(#CannotNotify(address));
+                return #err(#Other("Can only BURN to principals"));
               };
               case (#principal principal) {
-                let ns : NotifyService = actor(Principal.toText(principal));
-                let r = await ns.tokenTransferNotification(request.token, request.from, request.amount, request.memo);
-                accepted := switch(r){
-                  case (?b) b;
-                  case (_) {
-                    _refund(from_aid, request.amount);
-                    return #err(#Rejected);
+                let cs : CallbackService = actor(Principal.toText(principal));
+                
+                //This handles balance update, refunds and cycle transfer and supply updates - same as with burn()
+                let r = await _burnAndSendCycles(from_aid, request.amount, cs.acceptCycles);
+                if (r == true){
+                  //0 because 0 is transferred through the ledger the amount is burnt or refunded
+                  //todo maybe return actual amount sent
+                  return #ok(0);
+                } else {
+                  return #err(#InsufficientBalance); //shouldn't ever hit...
+                };
+              };
+            };
+          } else {
+            //Remove funds from sender first
+            _balances.put(from_aid, from_balance_after_fee - request.amount);
+            
+            var accepted : Balance = request.amount;
+            //Try and notify
+            if (request.notify == true) {
+              switch(request.to) {
+                case (#address address) {
+                  //Refund and exit - can only notify principals
+                  _refund(from_aid, request.amount);
+                  return #err(#CannotNotify(address));
+                };
+                case (#principal principal) {
+                  let ns : NotifyService = actor(Principal.toText(principal));
+                  let r = await ns.tokenTransferNotification(request.token, request.from, request.amount, request.memo);
+                  accepted := switch(r){
+                    case (?b) b;
+                    case (_) {
+                      _refund(from_aid, request.amount);
+                      return #err(#Rejected);
+                    };
                   };
                 };
               };
             };
-          };
-
-          
-          assert(accepted <= request.amount); //Should never trigger...
-          if (accepted < request.amount) {
-            //There was a refund
-            _refund(from_aid, request.amount - accepted);
-          };
-          
-          //Add to new balance
-          let to_balance_new = switch (_balances.get(to_aid)) {
-          case (?to_balance) {
-              to_balance + accepted;
+            assert(accepted <= request.amount); //Should never trigger...
+            if (accepted < request.amount) {
+              //There was a refund
+              _refund(from_aid, request.amount - accepted);
             };
-          case (_) {
-              accepted;
+            
+            //Add to new balance
+            let to_balance_new = switch (_balances.get(to_aid)) {
+            case (?to_balance) {
+                to_balance + accepted;
+              };
+            case (_) {
+                accepted;
+              };
             };
-          };
-          assert(to_balance_new >= accepted); //Should never trigger...
-          _balances.put(to_aid, to_balance_new);
-          return #ok(accepted);
+            assert(to_balance_new >= accepted); //Should never trigger...
+            _balances.put(to_aid, to_balance_new);
+            return #ok(accepted);
+          }
         } else if (from_balance >= request.fee) {
           _supply := _supply - request.fee;
           _balances.put(from_aid, from_balance - request.fee);
@@ -222,7 +239,7 @@ actor WTC_Token {
     EXTENSIONS;
   };
   public func metadata_secure(token : TokenIdentifier) : async Result.Result<Metadata, CommonError> {
-    #ok(METADATA);
+    #ok(WTCMETADATA);
   };
   public func supply_secure(token : TokenIdentifier) : async Result.Result<Balance, CommonError> {
     #ok(_supply);
@@ -253,7 +270,12 @@ actor WTC_Token {
     #ok(_supply);
   };
   public query func metadata(token : TokenIdentifier) : async Result.Result<Metadata, CommonError> {
-    #ok(METADATA);
+    #ok(WTCMETADATA);
+  };
+  
+  //Remove soon?
+  public query func balances() : async [(AccountIdentifier, Balance)] {
+    Iter.toArray(_balances.entries());
   };
   
 
@@ -269,6 +291,34 @@ actor WTC_Token {
         AID.fromPrincipal(principal, null);
       };
     };
+  };
+  private func _burnAndSendCycles(aid : AccountIdentifier, amount : Balance, callback : Callback) : async Bool {
+    switch (_balances.get(aid)) {
+      case (?balance) {
+        if (amount > balance) {
+          return false;
+        } else {
+          //Remove WTC before we call
+          _balances.put(aid, balance - amount);
+          
+          //If this fails, cycles are lost so remove from supply first (so we can still use the cycles)
+          _supply -= amount;
+          Cycles.add(amount);
+          await callback();
+          
+          //Refund refused cycles
+          let refund : Balance = Cycles.refunded();
+          if (refund > 0){
+            _refund(aid, refund);
+            _supply += refund;
+          };
+          return true;
+        };
+      };
+      case (_) {
+        return false;
+      };
+    }
   };
   private func _refund(aid : AccountIdentifier, refund : Balance) : () {
     switch (_balances.get(aid)) {
